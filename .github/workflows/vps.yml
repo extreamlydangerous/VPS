@@ -1,0 +1,44 @@
+name: Ubuntu 22.04 Free VPS
+
+on: workflow_dispatch
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+    
+    - name: Update system
+      run: sudo apt update
+
+    - name: Install SSH server
+      run: |
+        sudo apt install -y openssh-server
+        sudo systemctl enable ssh
+        sudo systemctl start ssh
+        echo "root:1234" | sudo chpasswd
+        sudo sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+        sudo sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+        sudo systemctl restart ssh
+
+    - name: Download Ngrok
+      run: |
+        wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-stable-linux-amd64.zip
+        unzip ngrok-stable-linux-amd64.zip
+        sudo mv ngrok /usr/local/bin/
+
+    - name: Start Ngrok Tunnel
+      env:
+        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+      run: |
+        ngrok config add-authtoken $NGROK_AUTH_TOKEN
+        ngrok tcp 22 --log=stdout > ngrok.log &
+        sleep 8
+        cat ngrok.log
+
+    - name: Show Connection Info
+      run: |
+        echo "============== VPS LOGIN =============="
+        echo "Username: root"
+        echo "Password: 1234"
+        echo "Ngrok Tunnel Address ↓↓↓"
+        curl -s http://127.0.0.1:4040/api/tunnels
