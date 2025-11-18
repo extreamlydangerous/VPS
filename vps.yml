@@ -6,11 +6,13 @@ jobs:
   build:
     runs-on: ubuntu-22.04
     steps:
+    
     - name: Update system
-      run: sudo apt update && sudo apt install -y openssh-server curl
+      run: sudo apt update
 
-    - name: Enable SSH
+    - name: Install SSH server
       run: |
+        sudo apt install -y openssh-server
         sudo systemctl enable ssh
         sudo systemctl start ssh
         echo "root:1234" | sudo chpasswd
@@ -18,10 +20,10 @@ jobs:
         sudo sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
         sudo systemctl restart ssh
 
-    - name: Install Ngrok
+    - name: Download Ngrok
       run: |
-        curl -L https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz -o ngrok.tgz
-        tar -xvf ngrok.tgz
+        wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-stable-linux-amd64.zip
+        unzip ngrok-stable-linux-amd64.zip
         sudo mv ngrok /usr/local/bin/
 
     - name: Start Ngrok Tunnel
@@ -29,14 +31,14 @@ jobs:
         NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
       run: |
         ngrok config add-authtoken $NGROK_AUTH_TOKEN
-        ngrok tcp 22 --region ap --log=stdout > ngrok.log &
-        sleep 10
+        ngrok tcp 22 --log=stdout > ngrok.log &
+        sleep 8
         cat ngrok.log
 
-    - name: Show VPS Login
+    - name: Show Connection Info
       run: |
-        echo "====== VPS DETAILS ======"
+        echo "============== VPS LOGIN =============="
         echo "Username: root"
         echo "Password: 1234"
-        echo "Ngrok Address:"
+        echo "Ngrok Tunnel Address ↓↓↓"
         curl -s http://127.0.0.1:4040/api/tunnels
